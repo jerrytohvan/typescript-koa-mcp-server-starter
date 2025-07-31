@@ -1,0 +1,189 @@
+# TypeScript MCP Server Starter
+
+A Model Context Protocol (MCP) server starter built with TypeScript, supporting Streamable-HTTP transport. This project uses Koa for the HTTP server implementation and provides a solid foundation for building MCP servers.
+
+## Features
+
+- **Streamable-HTTP Transport**: Full support for MCP Streamable-HTTP protocol
+- **Koa-based HTTP Server**: Modern, lightweight HTTP server using Koa and @koa/router
+- **Session Management**: Full session lifecycle management with resumability support
+- **TypeScript**: Fully typed with comprehensive type definitions
+- **Development Tools**: Hot reloading, TypeScript compilation, and debugging support
+- **@modelcontextprotocol/sdk** (v1.10.1) - Official MCP SDK for building protocol-compliant servers
+
+
+## Installation
+
+This project uses Yarn as the package manager. To install dependencies:
+
+```bash
+yarn install
+```
+
+## Building the Project
+
+To build the TypeScript code:
+
+```bash
+yarn build
+```
+
+## Running the Server
+
+### Production Mode
+
+To run the server in production mode:
+
+```bash
+yarn start
+```
+
+The server will start on port 3000 by default. You can customize the port:
+
+```bash
+PORT=3002 yarn start
+```
+
+### Development Mode
+
+For development with hot reloading:
+
+```bash
+yarn dev
+```
+
+With a custom port:
+
+```bash
+PORT=3002 yarn dev
+```
+
+## Testing with MCP Clients
+
+### 1. Start the server
+```bash
+yarn start
+```
+
+### 2. Test with MCP Inspector
+```bash
+yarn inspector
+```
+
+The server runs on `http://localhost:3000/mcp` and supports the Streamable-HTTP transport protocol.
+
+## Available Tools
+
+The server comes with several example tools:
+
+### `greet`
+A simple greeting tool that takes a name parameter.
+
+**Parameters:**
+- `name` (string): Name to greet
+
+**Example:**
+```json
+{
+  "name": "greet",
+  "arguments": {
+    "name": "World"
+  }
+}
+```
+
+### `get_session`
+Gets the current session information.
+
+**Parameters:** None
+
+### `multi-greet`
+A demonstration tool that sends multiple notifications with delays.
+
+**Parameters:**
+- `name` (string): Name to greet
+
+This tool demonstrates:
+- Asynchronous operations
+- Sending notifications during tool execution
+- Multiple response phases
+
+## Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PORT` | `3000` | HTTP server port |
+
+## Project Structure
+
+```
+├── src/
+│   ├── index.ts          # Main entry point
+│   └── server_runner.ts  # Server implementation with Koa
+├── build/                # Compiled JavaScript output
+├── package.json          # Project dependencies and scripts
+└── tsconfig.json         # TypeScript configuration
+```
+
+## Development
+
+### Adding New Tools
+
+To add a new tool, modify the server setup in `src/index.ts`:
+
+```typescript
+// Create the server
+const { server, start } = createMcpServer({
+  name: "your-server-name",
+});
+
+// Configure tools
+server.tool(
+  'my-tool',
+  'Description of my tool',
+  {
+    param1: z.string().describe('Description of param1'),
+    param2: z.number().describe('Description of param2'),
+  },
+  async ({ param1, param2 }, { sendNotification }): Promise<CallToolResult> => {
+    // Tool implementation
+    return {
+      content: [
+        {
+          type: 'text',
+          text: `Result: ${param1} and ${param2}`,
+        },
+      ],
+    };
+  }
+);
+
+// Start the server
+const servers = start();
+```
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Port already in use**: Change the `PORT` environment variable
+2. **TypeScript errors**: Run `yarn build` to check for compilation errors
+3. **Client connection issues**: Verify your MCP client is configured to use `http://localhost:3000/mcp`
+
+### Debugging
+
+Enable verbose logging by setting the `DEBUG` environment variable:
+
+```bash
+DEBUG=* yarn start
+```
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
+
+
