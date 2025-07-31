@@ -63,13 +63,21 @@ PORT=3002 yarn dev
 ## Testing with MCP Clients
 
 ### 1. Start the server
+In one terminal, start your MCP server:
 ```bash
 yarn start
 ```
 
 ### 2. Test with MCP Inspector
+In a separate terminal, test your Streamable-HTTP MCP server using the official MCP Inspector:
+
 ```bash
-yarn inspector
+npx @modelcontextprotocol/inspector http://localhost:3000/mcp
+```
+
+Or if you're using a custom port:
+```bash
+npx @modelcontextprotocol/inspector http://localhost:3002/mcp
 ```
 
 The server runs on `http://localhost:3000/mcp` and supports the Streamable-HTTP transport protocol.
