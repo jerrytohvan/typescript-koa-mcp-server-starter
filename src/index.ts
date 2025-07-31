@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { CallToolResult } from "@modelcontextprotocol/sdk/types.js"
 import { createMcpServer } from "./server_runner.js";
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8080;
 
 console.log("Initializing MCP Streamable-HTTP Server");
 

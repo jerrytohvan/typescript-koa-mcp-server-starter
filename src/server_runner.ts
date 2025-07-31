@@ -210,6 +210,12 @@ export const createMcpServer = (options: ServerOptions): { server: McpServer; st
       }
     });
 
+    // Add health check endpoint for Cloud Run
+    router.get('/health', async (ctx: Context) => {
+      ctx.status = 200;
+      ctx.body = { status: 'ok', timestamp: new Date().toISOString() };
+    });
+
     // Use router middleware
     app.use(router.routes());
     app.use(router.allowedMethods());
