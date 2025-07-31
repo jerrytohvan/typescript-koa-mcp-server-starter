@@ -2,6 +2,8 @@
 
 A Model Context Protocol (MCP) server starter built with TypeScript, supporting Streamable-HTTP transport. This project uses Koa for the HTTP server implementation and provides a solid foundation for building MCP servers.
 
+> **Inspired by**: This starter project is inspired by the [official MCP TypeScript SDK example](https://github.com/modelcontextprotocol/typescript-sdk/blob/main/src/examples/server/sseAndStreamableHttpCompatibleServer.ts) from the Model Context Protocol team.
+
 ## Features
 
 - **Streamable-HTTP Transport**: Full support for MCP Streamable-HTTP protocol
