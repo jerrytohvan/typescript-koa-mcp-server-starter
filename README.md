@@ -63,16 +63,66 @@ PORT=3002 yarn dev
 ## Testing with MCP Clients
 
 ### 1. Start the server
+In one terminal, start your MCP server:
 ```bash
 yarn start
 ```
 
 ### 2. Test with MCP Inspector
+In a separate terminal, test your Streamable-HTTP MCP server using the official MCP Inspector:
+
 ```bash
-yarn inspector
+npx @modelcontextprotocol/inspector http://localhost:3000/mcp
+```
+
+Or if you're using a custom port:
+```bash
+npx @modelcontextprotocol/inspector http://localhost:3002/mcp
 ```
 
 The server runs on `http://localhost:3000/mcp` and supports the Streamable-HTTP transport protocol.
+
+## Optional: Deploy to Google Cloud Run
+
+Want to deploy your MCP server to the cloud? This project includes everything needed for Google Cloud Run deployment:
+
+### Quick Deploy (3 steps):
+
+1. **Install and setup Google Cloud SDK**:
+   ```bash
+   curl https://sdk.cloud.google.com | bash
+   exec -l $SHELL  # or restart terminal
+   gcloud auth login
+   gcloud config set project YOUR_PROJECT_ID
+   ```
+
+2. **Enable required APIs**:
+   ```bash
+   gcloud services enable cloudbuild.googleapis.com run.googleapis.com containerregistry.googleapis.com
+   ```
+
+3. **Deploy from Local**:
+   ```bash
+   ./deploy.sh
+   ```
+
+That's it! The script will build, push, and deploy your server, then give you the public URL.
+
+### Alternative: Manual Deployment
+
+```bash
+# Build and push
+docker build -t gcr.io/YOUR_PROJECT_ID/streamable-mcp-server .
+docker push gcr.io/YOUR_PROJECT_ID/streamable-mcp-server
+
+# Deploy
+gcloud run deploy streamable-mcp-server \
+  --image gcr.io/YOUR_PROJECT_ID/streamable-mcp-server \
+  --platform managed --region us-central1 \
+  --allow-unauthenticated --port 3000
+```
+
+For detailed deployment instructions, see the [Deployment to Google Cloud Run](#deployment-to-google-cloud-run) section below.
 
 ## Available Tools
 
