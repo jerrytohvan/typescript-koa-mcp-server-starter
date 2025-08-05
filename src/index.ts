@@ -1,9 +1,17 @@
 import { z } from 'zod';
 import { CallToolResult, GetPromptResult, ReadResourceResult, Resource } from "@modelcontextprotocol/sdk/types.js"
 import { createMcpServer } from "./server_runner.js";
+import logger from "./logger.js";
 
-
-console.log("Initializing MCP Streamable-HTTP Server");
+logger.info("Initializing MCP Streamable-HTTP Server", {
+  nodeVersion: process.version,
+  platform: process.platform,
+  arch: process.arch,
+  pid: process.pid,
+  uptime: process.uptime(),
+  port: process.env.PORT,
+  nodeEnv: process.env.NODE_ENV
+});
 
 // Create the server
 const { server, start } = createMcpServer({
@@ -18,7 +26,7 @@ server.tool(
     name: z.string().describe('Name to greet'),
   },
   async ({ name }: { name: string }): Promise<CallToolResult> => {
-    console.log(`Tool Called: greet (name=${name})`);
+    logger.info('Tool called: greet', { name });
     return {
       content: [
         {
@@ -38,7 +46,7 @@ server.tool(
     name: z.string().describe('Name to greet'),
   },
   async ({ name }: { name: string }, { sendNotification }: { sendNotification: any }): Promise<CallToolResult> => {
-    console.log(`Tool Called: multi-greet (name=${name})`);
+    logger.info('Tool called: multi-greet', { name });
     const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
     await sendNotification({
@@ -95,7 +103,8 @@ server.tool(
         });
       }
       catch (error) {
-        console.error("Error sending notification:", error);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        logger.error('Error sending notification', { error: errorMessage });
       }
       // Wait for the specified interval
       await sleep(interval);
@@ -113,4 +122,20 @@ server.tool(
 );
 
 // Start the server
-const servers = start();
+try {
+  logger.info("Starting server...");
+  const servers = start();
+  logger.info("Server started successfully", { 
+    port: process.env.PORT || 3000,
+    processId: process.pid 
+  });
+} catch (error) {
+  const errorMessage = error instanceof Error ? error.message : String(error);
+  const errorStack = error instanceof Error ? error.stack : undefined;
+  logger.error("Failed to start server", { 
+    error: errorMessage, 
+    stack: errorStack,
+    port: process.env.PORT || 3000
+  });
+  process.exit(1);
+}

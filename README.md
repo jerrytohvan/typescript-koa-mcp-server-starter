@@ -101,7 +101,7 @@ Want to deploy your MCP server to the cloud? This project includes everything ne
    gcloud services enable cloudbuild.googleapis.com run.googleapis.com containerregistry.googleapis.com
    ```
 
-3. **Deploy**:
+3. **Deploy from Local**:
    ```bash
    ./deploy.sh
    ```

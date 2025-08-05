@@ -11,20 +11,21 @@ WORKDIR /app
 COPY package.json yarn.lock ./
 
 # Install all dependencies (including dev dependencies for build)
-RUN yarn install --ignore-scripts
+RUN yarn install --frozen-lockfile --ignore-scripts
 
-# Copy source code
+# Copy source code and config files
 COPY . .
 
 # Build the application
-RUN yarn build && ls -la build/
+RUN yarn build
 
 # Expose port
-EXPOSE 3000
+EXPOSE 8080
 
 # Set environment variables
 ENV NODE_ENV=production
-ENV PORT=3000
+ENV PORT=8080
+ENV HOST=0.0.0.0
 
 # Start the application
 CMD ["node", "build/index.js"] 

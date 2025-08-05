@@ -42,27 +42,23 @@ if [ -z "$PROJECT_ID" ]; then
     exit 1
 fi
 
-# Build the Docker image
-echo -e "${YELLOW}📦 Building Docker image...${NC}"
-docker build --platform linux/amd64 -t $IMAGE_NAME .
-
-# Push the image to Container Registry
-echo -e "${YELLOW}⬆️  Pushing image to Container Registry...${NC}"
-docker push $IMAGE_NAME
+# Build and push the Docker image
+echo -e "${YELLOW}📦 Building and pushing Docker image...${NC}"
+docker build --platform linux/amd64 -t $IMAGE_NAME . && docker push $IMAGE_NAME
 
 # Deploy to Cloud Run
 echo -e "${YELLOW}🚀 Deploying to Cloud Run...${NC}"
 gcloud run deploy $SERVICE_NAME \
     --image $IMAGE_NAME \
-    --platform managed \
     --region $REGION \
     --allow-unauthenticated \
     --port 8080 \
-    --memory 512Mi \
+    --memory 1Gi \
     --cpu 1 \
+    --min-instances 1 \
     --max-instances 10 \
-    --timeout 300 \
-    --set-env-vars NODE_ENV=production
+    --timeout 60 \
+    --set-env-vars NODE_ENV=production,HOST=0.0.0.0
 
 # Get the service URL
 SERVICE_URL=$(gcloud run services describe $SERVICE_NAME --region=$REGION --format="value(status.url)")
@@ -71,11 +67,9 @@ echo ""
 echo -e "${GREEN}✅ Deployment successful!${NC}"
 echo -e "${GREEN}🌐 Service URL: $SERVICE_URL${NC}"
 echo ""
-echo -e "${YELLOW}📋 To test the MCP server:${NC}"
-echo "curl -X POST $SERVICE_URL/mcp \\"
-echo "  -H 'Content-Type: application/json' \\"
-echo "  -H 'Accept: application/json' \\"
-echo "  -d '{\"jsonrpc\":\"2.0\",\"method\":\"initialize\",\"params\":{\"protocolVersion\":\"2024-11-05\",\"capabilities\":{},\"clientInfo\":{\"name\":\"test-client\",\"version\":\"1.0.0\"}},\"id\":1}'"
+echo -e "${YELLOW}🧪 Quick tests:${NC}"
+echo "curl $SERVICE_URL/health"
+echo "curl $SERVICE_URL/"
 echo ""
-echo -e "${YELLOW}🔧 To view logs:${NC}"
+echo -e "${YELLOW}📊 View logs:${NC}"
 echo "gcloud logs tail --service=$SERVICE_NAME --region=$REGION" 
