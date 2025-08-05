@@ -46,12 +46,22 @@ export const createMcpServer = (options: ServerOptions): { server: McpServer; st
 
     // Handle POST requests for client-to-server communication
     router.post('/mcp', async (ctx: Context) => {
-      console.log(`Request received: ${ctx.method} ${ctx.url}`, { body: ctx.request.body });
+      console.log(`=== MCP POST Request received: ${ctx.method} ${ctx.url} ===`);
+      console.log(`Request path: ${ctx.path}`);
+      console.log(`Request method: ${ctx.method}`);
+      console.log('Headers:', JSON.stringify(ctx.headers, null, 2));
+      console.log('Body:', JSON.stringify(ctx.request.body, null, 2));
+      console.log('URL:', ctx.url);
+      console.log('Path:', ctx.path);
       
       try {
         // Check for existing session ID
         const sessionId = ctx.headers['mcp-session-id'] as string | undefined;
         let transport: StreamableHTTPServerTransport;
+        
+        console.log(`Session ID from header: ${sessionId}`);
+        console.log(`Available sessions: ${Object.keys(transports).join(', ')}`);
+        console.log(`Session exists: ${sessionId ? transports[sessionId] ? 'yes' : 'no' : 'no session ID'}`);
 
         if (sessionId && transports[sessionId]) {
           // Reuse existing transport
@@ -89,7 +99,59 @@ export const createMcpServer = (options: ServerOptions): { server: McpServer; st
           console.log(`Handling initialization request...`);
           await transport.handleRequest(ctx.req, ctx.res, ctx.request.body);
           console.log(`Initialization request handled, response sent`);
+          
+          // Return the session ID in the response headers for the MCP Inspector
+          if (transport.sessionId) {
+            ctx.set('mcp-session-id', transport.sessionId);
+          }
+          ctx.respond = false; // Tell Koa not to send its own response
           return; // Already handled
+        } else if (sessionId && !transports[sessionId]) {
+          // Session ID provided but not found - create a new transport for this session
+          console.log(`Creating new transport for provided session ID: ${sessionId}`);
+          const eventStore = new InMemoryEventStore();
+          transport = new StreamableHTTPServerTransport({
+            sessionIdGenerator: () => sessionId, // Use the provided session ID
+            enableJsonResponse: true,
+            eventStore,
+            onsessioninitialized: (sid) => {
+              // Store the transport by session ID when session is initialized
+              // This avoids race conditions where requests might come in before the session is stored
+              console.log(`Session initialized with provided ID: ${sid}`);
+              transports[sid] = transport;
+            }
+          });
+
+          // Set up onclose handler to clean up transport when closed
+          transport.onclose = () => {
+            const sid = transport.sessionId;
+            if (sid && transports[sid]) {
+              console.log(`Transport closed for session ${sid}, removing from transports map`);
+              delete transports[sid];
+            }
+          };
+
+          // Connect the transport to the MCP server BEFORE handling the request
+          // so responses can flow back through the same transport
+          console.log(`Connecting transport to MCP server for session ${sessionId}...`);
+          await server.connect(transport);
+          console.log(`Transport connected to MCP server successfully for session ${sessionId}`);
+          
+          // Store the transport
+          transports[sessionId] = transport;
+        } else if (!sessionId && !isInitializeRequest(ctx.request.body)) {
+          // No session ID and not an initialization request - this is an error
+          console.error('Invalid request: No session ID and not an initialization request');
+          ctx.status = 400;
+          ctx.body = {
+            jsonrpc: '2.0',
+            error: {
+              code: -32000,
+              message: 'Bad Request: No valid session ID provided',
+            },
+            id: null,
+          };
+          return;
         } else {
           console.error('Invalid request: No valid session ID or initialization request');
           // Invalid request
@@ -114,6 +176,8 @@ export const createMcpServer = (options: ServerOptions): { server: McpServer; st
         await transport.handleRequest(ctx.req, ctx.res, ctx.request.body);
         const duration = Date.now() - startTime;
         console.log(`Request handling completed in ${duration}ms for session: ${transport.sessionId}`);
+        ctx.respond = false; // Tell Koa not to send its own response
+        return;
       } catch (error) {
         console.error('Error handling MCP request:', error);
         if (!ctx.res.headersSent) {
@@ -212,13 +276,49 @@ export const createMcpServer = (options: ServerOptions): { server: McpServer; st
 
     // Add health check endpoint for Cloud Run
     router.get('/health', async (ctx: Context) => {
+      try {
+        ctx.status = 200;
+        ctx.body = { 
+          status: 'ok', 
+          timestamp: new Date().toISOString(),
+          service: 'streamable-mcp-server',
+          version: '1.0.0'
+        };
+        console.log('Health check request handled successfully');
+      } catch (error) {
+        console.error('Health check error:', error);
+        ctx.status = 500;
+        ctx.body = { 
+          status: 'error', 
+          message: 'Health check failed',
+          timestamp: new Date().toISOString()
+        };
+      }
+    });
+
+    // Add root endpoint for basic connectivity testing
+    router.get('/', async (ctx: Context) => {
       ctx.status = 200;
-      ctx.body = { status: 'ok', timestamp: new Date().toISOString() };
+      ctx.body = { 
+        message: 'MCP Streamable HTTP Server is running',
+        endpoints: {
+          health: '/health',
+          mcp: '/mcp'
+        },
+        timestamp: new Date().toISOString()
+      };
+    });
+
+    // Add a test route to debug routing
+    router.post('/test-mcp', async (ctx: Context) => {
+      console.log('=== TEST MCP ROUTE HIT ===');
+      ctx.status = 200;
+      ctx.body = { message: 'Test MCP route works' };
     });
 
     // Use router middleware
     app.use(router.routes());
-    app.use(router.allowedMethods());
+    app.use(router.allowedMethods()); // Re-enabled for proper routing
 
     // Start HTTP server
     const httpServer = app.listen(PORT, () => {

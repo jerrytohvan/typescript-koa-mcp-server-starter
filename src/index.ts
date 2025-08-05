@@ -1,8 +1,7 @@
 import { z } from 'zod';
-import { CallToolResult } from "@modelcontextprotocol/sdk/types.js"
+import { CallToolResult, GetPromptResult, ReadResourceResult, Resource } from "@modelcontextprotocol/sdk/types.js"
 import { createMcpServer } from "./server_runner.js";
 
-const PORT = process.env.PORT || 8080;
 
 console.log("Initializing MCP Streamable-HTTP Server");
 
@@ -18,29 +17,13 @@ server.tool(
   {
     name: z.string().describe('Name to greet'),
   },
-  async ({ name }): Promise<CallToolResult> => {
+  async ({ name }: { name: string }): Promise<CallToolResult> => {
     console.log(`Tool Called: greet (name=${name})`);
     return {
       content: [
         {
           type: 'text',
           text: `Hello, ${name}!`,
-        },
-      ],
-    };
-  }
-);
-
-server.tool(
-  'get_session',
-  'gets the session id and context',
-  {},
-  async ({}): Promise<CallToolResult> => {
-    return {
-      content: [
-        {
-          type: 'text',
-          text: `session`,
         },
       ],
     };
@@ -54,7 +37,7 @@ server.tool(
   {
     name: z.string().describe('Name to greet'),
   },
-  async ({ name }, { sendNotification }): Promise<CallToolResult> => {
+  async ({ name }: { name: string }, { sendNotification }: { sendNotification: any }): Promise<CallToolResult> => {
     console.log(`Tool Called: multi-greet (name=${name})`);
     const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -82,6 +65,47 @@ server.tool(
         {
           type: 'text',
           text: `Good morning, ${name}!`,
+        }
+      ],
+    };
+  }
+);
+
+// Register a tool for testing resumability
+server.tool(
+  'start-notification-stream',
+  'Starts sending periodic notifications for testing resumability',
+  {
+    interval: z.number().describe('Interval in milliseconds between notifications').default(100),
+    count: z.number().describe('Number of notifications to send (0 for 100)').default(50),
+  },
+  async ({ interval, count }: { interval: number; count: number }, { sendNotification }: { sendNotification: any }): Promise<CallToolResult> => {
+    const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+    let counter = 0;
+
+    while (count === 0 || counter < count) {
+      counter++;
+      try {
+        await sendNotification({
+          method: "notifications/message",
+          params: {
+            level: "info",
+            data: `Periodic notification #${counter} at ${new Date().toISOString()}`
+          }
+        });
+      }
+      catch (error) {
+        console.error("Error sending notification:", error);
+      }
+      // Wait for the specified interval
+      await sleep(interval);
+    }
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: `Started sending periodic notifications every ${interval}ms`,
         }
       ],
     };
