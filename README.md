@@ -1,3 +1,5 @@
+[![MSeeP.ai Security Assessment Badge](https://mseep.net/pr/jerrytohvan-typescript-koa-mcp-server-starter-badge.png)](https://mseep.ai/app/jerrytohvan-typescript-koa-mcp-server-starter)
+
 # TypeScript MCP Server Starter
 
 A Model Context Protocol (MCP) server starter built with TypeScript, supporting Streamable-HTTP transport. This project uses Koa for the HTTP server implementation and provides a solid foundation for building MCP servers.
